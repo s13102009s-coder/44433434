@@ -1,0 +1,90 @@
+USE Academy;
+
+-- Удаление старых объектов, если они существуют
+DROP PROCEDURE IF EXISTS ps_students_insert;
+DROP FUNCTION IF EXISTS fn_generate_student_name;
+
+DELIMITER //
+
+-- 1. Функция генерации случайного имени
+CREATE FUNCTION fn_generate_student_name()
+RETURNS VARCHAR(100)
+NOT DETERMINISTIC
+BEGIN
+    DECLARE student_name VARCHAR(100);
+
+    SET student_name = CONCAT(
+        ELT(FLOOR(1 + RAND() * 10),
+            'Александр',
+            'Дмитрий',
+            'Максим',
+            'Артём',
+            'Иван',
+            'Андрей',
+            'Кирилл',
+            'Михаил',
+            'Егор',
+            'Даниил'
+        ),
+        ' ',
+        ELT(FLOOR(1 + RAND() * 10),
+            'Иванов',
+            'Петров',
+            'Сидоров',
+            'Смирнов',
+            'Кузнецов',
+            'Попов',
+            'Васильев',
+            'Соколов',
+            'Михайлов',
+            'Новиков'
+        )
+    );
+
+    RETURN student_name;
+END //
+
+-- 2. Создание хранимой процедуры
+CREATE PROCEDURE ps_students_insert(IN amount INT)
+BEGIN
+    DECLARE counter INT DEFAULT 1;
+    DECLARE random_group_id INT;
+    DECLARE random_age INT;
+
+    WHILE counter <= amount DO
+
+        -- Выбор случайной группы
+        SELECT id INTO random_group_id
+        FROM student_group
+        ORDER BY RAND()
+        LIMIT 1;
+
+        -- Случайный возраст
+        SET random_age = FLOOR(16 + RAND() * 15);
+
+        -- Добавление студента
+        INSERT INTO students (student_name, group_id)
+        VALUES (
+            fn_generate_student_name(),
+            random_group_id
+        );
+
+        SET counter = counter + 1;
+
+    END WHILE;
+END //
+
+DELIMITER ;
+
+-- 3. Автоматическое добавление 20 студентов
+CALL ps_students_insert(20);
+
+-- 4. Проверка добавленных студентов
+SELECT * FROM students;
+
+-- 5. Проверка работы функции
+SELECT fn_generate_student_name();
+
+-- 6. Проверка количества студентов
+SELECT COUNT(*) AS total_students
+FROM students;
